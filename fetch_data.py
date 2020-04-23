@@ -401,6 +401,7 @@ def wb_request_indicator(indicator, country=None, mrnev=None,
         else:
             wb_request_url += f'&date={date}'
     #
+    print(f"Request URL [ {wb_request_url} ]")
     with urllib.request.urlopen(wb_request_url) as response:
         response_json = json.loads(response.read())
 

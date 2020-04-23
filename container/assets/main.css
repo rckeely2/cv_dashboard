@@ -1,0 +1,64 @@
+html {
+    height: 100%;
+    border-width: 0px;
+    margin: 0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    overflow: hidden;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  border-width: 0px;
+  margin: 0px 0px 0px 0px;
+  padding: 0px 0px 0px 0px;
+}
+
+div.masthead {
+  background-color: #cccccc;
+  width: 100%;
+  border-width: 0px;
+  margin: 0px 0px 0px 0px;
+  padding: -10px;
+  vertical-align: middle;
+  color: #ffffff;
+}
+
+div.sidepanel {
+  background-color: #7395ae;
+  float: left;
+  width: 20%;
+  height : 100vh;
+  margin: 0px 0px 0px 0px;
+  padding: 20px 20px 20px 20px;
+  border-width: 0px;
+}
+
+div.mainpanel {
+  float: right;
+  background-color: #ffffff;
+  margin: 0px 0px 0px 0px;
+  padding: 20px 20px 20px 20px;
+  border-width: 0px;
+  width: 74%;
+  height: 100vh;
+}
+
+.table {
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+
+div.footer {
+  background-color: #cccccc;
+  width: 100%;
+  border-width: 0px;
+  margin: 0px 0px 0px 0px;
+  padding: -10px;
+  vertical-align: middle;
+  color: #ffffff;
+}
+
+h3.subcomponent {
+  color : #ffffff;
+}

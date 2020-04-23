@@ -3,3 +3,7 @@ venv
 __pycache__
 assets/*.csv
 .ipynb_checkpoints/
+*.PEM
+container/assets/*.csv
+container/*.py
+container/requirements.txt

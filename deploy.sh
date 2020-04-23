@@ -1,4 +1,7 @@
 #!/bin/sh
 
-cp *.py container
-cp -r assets container/assets
+pip freeze > requirements.txt
+cp requirements.txt container/
+cp *.py container/
+rm -r container/assets
+cp -r assets container/

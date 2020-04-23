@@ -79,6 +79,10 @@ app.layout = html.Div(className="container",children=
                 # Mainpanel
                 dbc.Col(html.Div(className="mainpanel",children=
                 [
+                    html.Div(className="graphCont", children=
+                    [
+                        "this is where the graphs go"
+                    ]),
                     html.Div(className="tableCont",children=
                     [
                         dash_table.DataTable(
@@ -110,7 +114,7 @@ app.layout = html.Div(className="container",children=
     Output(component_id='table', component_property='columns'),
     [Input(component_id='selected_columns', component_property='value')]
     )
-def update_testList(input_value):
+def update_tableColumns(input_value):
     if len(input_value) != 0:
         return [{"name": i, "id": i} for i in full_df.columns[input_value]]
     else:
@@ -119,6 +123,8 @@ def update_testList(input_value):
     #     return input_value
     # else:
     #     return ", ".join(input_value)
+
+
 
 # @app.callback(
 #     Output('datatable-interactivity', 'style_data_conditional'),
