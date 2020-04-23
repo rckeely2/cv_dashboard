@@ -73,13 +73,88 @@ def reverse_lookup_col_idx(search_col, search_list):
     s = pd.Series(full_df[search_col].unique()).isin(search_list)
     return list(s[s].index)
 
-def apply_rmean(series, rmean):
-    if rmean == 0:
+def apply_rmean(series, rmean, cumulative):
+    if (cumulative or (rmean == 0)):
         return series
     else:
         rmean = int(rmean_options[rmean])
         series = pd.Series(series).rolling(window=rmean).mean()
         return series
+
+def rebase_series(series, threshold=0, ret_idx = False, trim_idx = -1):
+    series.reset_index(drop=True,inplace=True)
+    if threshold == 0:
+        return series
+    if (trim_idx == -1):
+        trim_idx = bisect.bisect_left(series, threshold)
+    trim_series = np.array(list(series[trim_idx:].values) + [np.nan]*trim_idx)
+    if ret_idx:
+        return trim_series, trim_idx
+    else:
+        return trim_series
+
+def generate_x(series, threshold):
+    if threshold == 0:
+        return series
+    else:
+        return list(range(1,len(series)+1))
+
+def generate_single_data(country, threshold, rmean, cv_variable, normalise, cumulative):
+    plot_vars_l = [ generate_plot_var(i, normalise, cumulative) for i in range(len(plot_vars))]
+    plot_dict = [dict(
+        x = generate_x(full_df[full_df['Name']==country]['Date'],threshold),
+        y = rebase_series(apply_rmean(full_df[full_df['Name']==country][plot_var], rmean, cumulative), threshold),
+        #y = rebase_series(apply_rmean(full_df[full_df['Name']==country][plot_var], rmean, cumulative),threshold),
+        #'text': ['a', 'b', 'c', 'd'],
+        #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
+        name =  plot_var,
+        mode = 'line',
+        marker =  {'size': 10}
+    ) for plot_var in plot_vars_l ]
+    return plot_dict
+
+def generate_multi_data(country_list_l, threshold, rmean, cv_variable, normalise, cumulative):
+    plot_var = generate_plot_var(cv_variable, normalise, cumulative)
+    plot_dict = [dict(
+        x = generate_x(full_df[full_df['Name']==country]['Date'],threshold),
+        y = rebase_series(apply_rmean(full_df[full_df['Name']==country][plot_var], rmean, cumulative), threshold),
+        #y = rebase_series(apply_rmean(full_df[full_df['Name']==country][plot_var], rmean, cumulative),threshold),
+        #'text': ['a', 'b', 'c', 'd'],
+        #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
+        name =  country,
+        mode = 'line',
+        marker =  {'size': 10}
+    ) for country in country_list_l]
+    return plot_dict
+
+def generate_layout(threshold, rmean, yscale, cv_variable, normalise, cumulative):
+    plot_var = generate_plot_var(cv_variable, normalise, cumulative)
+    if threshold == 0:
+        xaxis_val = {'type': 'date', 'title': 'Date'}
+    else:
+        #xaxis_val = {'type': 'date', 'title': 'Date'}
+        xaxis_val = {'type': 'linear', 'title': f'Days since {threshold}th {plot_var}'}
+    layout_dict = dict(
+        clickmode='event+select',
+        xaxis=xaxis_val,
+        yaxis={'type': yscale, 'title':f"{plot_var} rmean:{rmean_options[rmean]} threshold:{threshold}"})
+    return layout_dict
+
+def generate_data(country_list_l, threshold, rmean, cv_variable, normalise, cumulative):
+    #if len(country_l)
+    if len(country_list_l) == 1:
+        plot_dict = generate_single_data(country_list_l[0], threshold, rmean, cv_variable, normalise, cumulative)
+        #layout_dict = generate_single_layout()
+    else:
+        plot_dict = generate_multi_data(country_list_l, threshold, rmean, cv_variable, normalise, cumulative)
+        #layout_dict = generate_multi_layout()
+    return plot_dict
+
+def plot_figure(countries, cv_variable, yscale, normalise, rmean, threshold, cumulative):
+    country_list_l = full_df['Name'].unique()[countries]
+    figure={'data': generate_data(country_list_l, threshold, rmean, cv_variable, normalise, cumulative),
+            'layout': generate_layout(threshold, rmean, yscale, cv_variable, normalise, cumulative)}
+    return figure
 
 app.layout = html.Div(className="container",children=
     [
@@ -89,7 +164,7 @@ app.layout = html.Div(className="container",children=
         # ])),
         dbc.Row(html.Div(
         [
-            html.H1(id="testbox", children=["testbox"]),
+            #html.H1(id="testbox", children=["testbox"]),
             html.H3('Cross country comparisons'),
 
             dbc.Col(className="graph_controls", children=[
@@ -108,6 +183,28 @@ app.layout = html.Div(className="container",children=
                                value='simple',
                                id='normalise',
                                labelStyle={'display': 'inline-block'}),
+                ]),
+            dbc.Col(className="graph_controls", children=[
+                html.P(className="graph_controls", children='Cumulative Threshold'),
+                dcc.Dropdown(id="threshold_cumulative",
+                             options=[{'label':'None', 'value':0},
+                                      {'label':'100', 'value':100},
+                                      {'label':'500', 'value':500},
+                                      {'label':'1000', 'value':1000}],
+                             placeholder='Select threshold',
+                             value=0,
+                             )
+                ]),
+            dbc.Col(className="graph_controls", children=[
+                html.P(className="graph_controls", children='Daily Threshold'),
+                dcc.Dropdown(id="threshold_daily",
+                             options=[{'label':'None', 'value':0},
+                                      {'label':'25', 'value':25},
+                                      {'label':'100', 'value':100},
+                                      {'label':'250', 'value':250}],
+                             placeholder='Select threshold',
+                             value=0,
+                             )
                 ]),
             dbc.Col(className="graph_controls", children=[
                 html.P(className="graph_controls", children='Rolling mean'),
@@ -240,41 +337,35 @@ def update_tableColumns(input_value):
      Input(component_id='cv_variables', component_property='value'),
      Input(component_id='yscale_rb', component_property='value'),
      Input(component_id='normalise', component_property='value'),
-     Input(component_id='rollingMean', component_property='value')]
+     Input(component_id='rollingMean', component_property='value'),
+     Input(component_id='threshold_cumulative', component_property='value')]
     )
-def update_topGraph(countries, cv_variable, yscale, normalise, rmean):
-    country_list_l = full_df['Name'].unique()[countries]
-    plot_var = generate_plot_var(cv_variable, normalise, True)
-    #plot_var = plot_vars[cv_variable]
-    figure={'data': [
-                dict(
-                    x = full_df[full_df['Name']==country]['Date'],
-                    y = full_df[full_df['Name']==country][plot_var],
-                    #'text': ['a', 'b', 'c', 'd'],
-                    #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-                    name =  country,
-                    mode = 'line',
-                    marker =  {'size': 10}
-                ) for country in country_list_l
-            ],
-            'layout': dict(
-                clickmode='event+select',
-                xaxis={'title': 'time'},
-                yaxis={'type': yscale, 'title':plot_var}
-            )
-        }
+def update_topGraph(countries, cv_variable, yscale, normalise, rmean, threshold):
+    cumulative = True
+    figure = plot_figure(countries, cv_variable, yscale, normalise, rmean, threshold, cumulative)
     return figure
-
-@app.callback(
-    Output(component_id='testbox', component_property='children'),
-    [Input(component_id='country_names', component_property='value'),
-     Input(component_id='cv_variables', component_property='value'),
-     Input(component_id='yscale_rb', component_property='value'),
-     Input(component_id='normalise', component_property='value'),
-     Input(component_id='rollingMean', component_property='value')]
-    )
-def update_testbox(countries, cv_variable, yscale, normalise, rmean):
-    return generate_plot_var(cv_variable, normalise, True)
+    # country_list_l = full_df['Name'].unique()[countries]
+    #
+    # plot_var = generate_plot_var(cv_variable, normalise, cumulative)
+    # #plot_var = plot_vars[cv_variable]
+    # figure={'data': [
+    #             dict(
+    #                 x = full_df[full_df['Name']==country]['Date'],
+    #                 y = full_df[full_df['Name']==country][plot_var],
+    #                 #'text': ['a', 'b', 'c', 'd'],
+    #                 #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
+    #                 name =  country,
+    #                 mode = 'line',
+    #                 marker =  {'size': 10}
+    #             ) for country in country_list_l
+    #         ],
+    #         'layout': dict(
+    #             clickmode='event+select',
+    #             xaxis={'title': 'time'},
+    #             yaxis={'type': yscale, 'title':plot_var}
+    #         )
+    #     }
+    # return figure
 
 @app.callback(
     Output(component_id='bottomGraph', component_property='figure'),
@@ -282,31 +373,15 @@ def update_testbox(countries, cv_variable, yscale, normalise, rmean):
      Input(component_id='cv_variables', component_property='value'),
      Input(component_id='yscale_rb', component_property='value'),
      Input(component_id='normalise', component_property='value'),
-     Input(component_id='rollingMean', component_property='value')]
+     Input(component_id='rollingMean', component_property='value'),
+     Input(component_id='threshold_daily', component_property='value')]
     )
-def update_bottomGraph(countries, cv_variable, yscale, normalise, rmean):
-    country_list_l = full_df['Name'].unique()[countries]
-    plot_var = generate_plot_var(cv_variable, normalise, False)
-    #plot_vars[cv_variable]
-
-    figure={'data': [
-                dict(
-                    x = full_df[full_df['Name']==country]['Date'],
-                    y = apply_rmean(full_df[full_df['Name']==country][plot_var], rmean),
-                    #'text': ['a', 'b', 'c', 'd'],
-                    #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-                    name =  country,
-                    mode = 'line',
-                    marker =  {'size': 10}
-                ) for country in country_list_l
-            ],
-            'layout': dict(
-                clickmode='event+select',
-                xaxis={'title': 'time'},
-                yaxis={'type': yscale, 'title':f"{plot_var} rmean:{rmean_options[rmean]}"}
-            )
-        }
+def update_bottomGraph(countries, cv_variable, yscale, normalise, rmean, threshold):
+    cumulative = False
+    figure = plot_figure(countries, cv_variable, yscale, normalise, rmean, threshold, cumulative)
     return figure
+
+
 
 # @app.callback(
 #     Output('datatable-interactivity', 'style_data_conditional'),
