@@ -543,7 +543,12 @@ def build_full_df(cv_df):
     cv_df = cv_df[merge_columns]
     full_df = pd.merge(full_df, cv_df, how='inner', on='ISO3166_alpha3')
     # Fix the world name
-    full_df.loc[full_df["ISO3166_alpha3"] == 'WLD', "Name"] = 'World'
+    full_df.loc[full_df["ISO3166_alpha3"] == 'ESH', "DisplayName"] = 'Western Sahara'
+    full_df.loc[full_df["ISO3166_alpha3"] == 'TWN', "DisplayName"] = 'Taiwan'
+    full_df.loc[full_df["ISO3166_alpha3"] == 'VAT', "DisplayName"] = 'Holy See (Vatican City)'
+    full_df.loc[full_df["ISO3166_alpha3"] == 'WLD', "DisplayName"] = 'World'
+    full_df.loc[full_df["ISO3166_alpha3"] == 'XKS', "DisplayName"] = 'Kosovo'
+
 
     # ToDo : Refactor later to move all the merges after the rotate,
     # but for now this works...
