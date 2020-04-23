@@ -78,41 +78,11 @@ def build_frame(df, country, province=None):
         sf['Province/State'] = province
     sf.columns = ['confirmed_total', 'deaths_total',
                   'recovered_total', 'Province/State']
-
     sf['Country/Region'] = country
     codes = map_name_to_ISOcode(country)
     sf['ISO3166_alpha2'] = codes[0]
     sf['ISO3166_alpha3'] = codes[1]
     sf['ISO3166_numeric'] = codes[2]
-
-    population = np.nan
-    if 'population' in df.columns:
-        population = df.loc[(df['Country/Region'] == country),
-                'population'].values[0]
-    # else:
-    #     print(f"{country} : population missing")
-    #     #print(sf.columns)
-
-    col_vars = ['confirmed', 'deaths', 'recovered']
-
-    for cv in col_vars:
-        sf[f'{cv}'] = sf[f'{cv}_total'].diff()
-        try:
-            sf[f'{cv}_total_norm'] = (sf[f'{cv}_total'] / population) * 1e6
-        except:
-            sf[f'{cv}_total_norm'] = np.nan
-        sf[f'{cv}_log_total'] = np.log2(sf[f'{cv}_total'])
-        sf[f'{cv}_log'] = sf[f'{cv}_log_total'].diff()
-        sf[f'{cv}_log_growth'] = np.power(2, sf[f'{cv}_log']) - 1
-
-    sf['net_cases'] = sf['confirmed'] - sf['deaths'] - sf['recovered']
-    sf['active_cases'] = sf['net_cases'].cumsum()
-        # np.exp(np.diff(np.log(population))) - 1
-        #sf[f'{cv}_diff_2'] = sf[f'{cv}_cum'].diff(2)
-        #sf[f'{cv}_log_cum'] = np.log(sf[f'{cv}_cum'])
-        #sf[f'{cv}_log_diff'] = np.log(sf[f'{cv}_diff'])
-
-
     return sf
 
 def plot_df(df, days=30):
@@ -521,6 +491,58 @@ def fetch_components(indicator_names,
 
     return cv_merged_df, iso_codes_df, indicator_df
 
+def generate_features(df):
+    roots = ['confirmed', 'deaths', 'recovered']
+
+    for root in roots:
+        df[f'{root}_daily'] = df[f'{root}_total'].diff()
+    df[f'active_daily'] = df['confirmed_daily'] - df['deaths_daily'] - df['recovered_daily']
+    df[f'active_total'] = df[f'active_daily'].cumsum()
+
+    roots += ['active']
+    suffixes = ['_total', '_daily']
+    for suffix in suffixes:
+        for root in roots:
+            df[f'{root}{suffix}_norm'] = (df[f'{root}{suffix}'] / df['population']) * 1000000
+            #df[f'{root}{suffix}_pct'] = df[f'{root}{suffix}']
+
+    for date in df['Date'].unique():
+        for suffix in suffixes:
+            for root in roots:
+                world_val = df.loc[(df['DisplayName']=='World') &
+                                   (df['Date']==date),
+                                   f'{root}{suffix}'].values[0]
+                df.loc[df['Date']==date,f'{root}{suffix}_pct'] = (df[f'{root}{suffix}'] / world_val) * 100
+
+    return df
+
+# population = np.nan
+# if 'population' in df.columns:
+#     population = df.loc[(df['Country/Region'] == country),
+#             'population'].values[0]
+# # else:
+# #     print(f"{country} : population missing")
+# #     #print(sf.columns)
+#
+# col_vars = ['confirmed', 'deaths', 'recovered']
+#
+# for cv in col_vars:
+#     sf[f'{cv}'] = sf[f'{cv}_total'].diff()
+#     try:
+#         sf[f'{cv}_total_norm'] = (sf[f'{cv}_total'] / population) * 1e6
+#     except:
+#         sf[f'{cv}_total_norm'] = np.nan
+#     sf[f'{cv}_log_total'] = np.log2(sf[f'{cv}_total'])
+#     sf[f'{cv}_log'] = sf[f'{cv}_log_total'].diff()
+#     sf[f'{cv}_log_growth'] = np.power(2, sf[f'{cv}_log']) - 1
+#
+# sf['net_cases'] = sf['confirmed'] - sf['deaths'] - sf['recovered']
+# sf['active_cases'] = sf['net_cases'].cumsum()
+    # np.exp(np.diff(np.log(population))) - 1
+    #sf[f'{cv}_diff_2'] = sf[f'{cv}_cum'].diff(2)
+    #sf[f'{cv}_log_cum'] = np.log(sf[f'{cv}_cum'])
+    #sf[f'{cv}_log_diff'] = np.log(sf[f'{cv}_diff']
+
 def build_full_df(cv_df):
     countries = cv_df['Country/Region'].unique()
     first = True
@@ -549,10 +571,11 @@ def build_full_df(cv_df):
     full_df.loc[full_df["ISO3166_alpha3"] == 'WLD', "DisplayName"] = 'World'
     full_df.loc[full_df["ISO3166_alpha3"] == 'XKS', "DisplayName"] = 'Kosovo'
 
-
     # ToDo : Refactor later to move all the merges after the rotate,
     # but for now this works...
     full_df = full_df.drop_duplicates()
+    full_df = generate_features(full_df)
+    full_df.reset_index(inplace=True, drop=True)
 
     # # ToDo : put this in a file to allow it to be pulled out easily
     new_names = {"Country/Region" : "Country/Region",
@@ -569,23 +592,36 @@ def build_full_df(cv_df):
             "confirmed_total" : "Confirmed (Total)",
             "deaths_total" : "Deaths (Total)",
             "recovered_total" : "Recovered (Total)",
-            "active_cases" : "Active (Total)",
+            "active_total" : "Active (Total)",
             "confirmed_total_norm" : "Confirmed (Total, normalised)",
             "deaths_total_norm" : "Deaths (Total, normalised)",
             "recovered_total_norm" : "Recovered (Total, normalised)",
-            "confirmed_log_total" : "Confirmed (Total, log)",
-            "deaths_log_total" : "Deaths (Total, log)",
-            "recovered_log_total" : "Recovered (Total, log)",
-            "confirmed" : "Confirmed (Daily)",
-            "deaths" : "Deaths (Daily)",
-            "recovered" : "Recovered (Daily)",
-            "net_cases" : "Net Cases (Daily)",
-            "confirmed_log" : "Confirmed (Daily, log)",
-            "deaths_log" : "Deaths (Daily, log)",
-            "recovered_log" : "Recovered (Daily, log)",
-            "confirmed_log_growth" : "Confirmed (Daily, log growth)",
-            "deaths_log_growth" : "Deaths (Daily, log growth)",
-            "recovered_log_growth" : "Recovered (Daily, log growth)"
+            "active_total_norm" : "Active (Total, normalised)",
+            "confirmed_total_pct" : "Confirmed (Total, percent)",
+            "deaths_total_pct" : "Deaths (Total, percent)",
+            "recovered_total_pct" : "Recovered (Total, percent)",
+            "active_total_pct" : "Active (Total, percent)",
+            # "confirmed_log_total" : "Confirmed (Total, log)",
+            # "deaths_log_total" : "Deaths (Total, log)",
+            # "recovered_log_total" : "Recovered (Total, log)",
+            "confirmed_daily" : "Confirmed (Daily)",
+            "deaths_daily" : "Deaths (Daily)",
+            "recovered_daily" : "Recovered (Daily)",
+            "active_daily" : "Active (Daily)",
+            "confirmed_daily_norm" : "Confirmed (Daily, normalised)",
+            "deaths_daily_norm" : "Deaths (Daily, normalised)",
+            "recovered_daily_norm" : "Recovered (Daily, normalised)",
+            "active_daily_norm" : "Active (Daily, normalised)",
+            "confirmed_daily_pct" : "Confirmed (Daily, percent)",
+            "deaths_daily_pct" : "Deaths (Daily, percent)",
+            "recovered_daily_pct" : "Recovered (Daily, percent)",
+            "active_daily_pct" : "Active (Daily, percent)",
+            # "confirmed_log" : "Confirmed (Daily, log)",
+            # "deaths_log" : "Deaths (Daily, log)",
+            # "recovered_log" : "Recovered (Daily, log)",
+            # "confirmed_log_growth" : "Confirmed (Daily, log growth)",
+            # "deaths_log_growth" : "Deaths (Daily, log growth)",
+            # "recovered_log_growth" : "Recovered (Daily, log growth)"
             }
     full_df = full_df.rename(columns=new_names)
     full_df = full_df[new_names.values()]

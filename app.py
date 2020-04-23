@@ -53,11 +53,15 @@ styles = {
 default_countries = ['Spain', 'Italy', 'France', 'Germany', 'United States', 'China',
                 'United Kingdom', 'Korea, Rep.']
 plot_vars = ['Confirmed', 'Deaths', 'Recovered', 'Active']
+rmean_options = ['None', '3', '5', '7']
 
 def generate_plot_var(cv_variable, normalise, cumulative):
     norm_str = ""
-    if normalise == "enable":
+    if normalise == "normalise":
         norm_str = ", normalised"
+    elif normalise == "percent":
+        norm_str = ", percent"
+
     if cumulative:
         typeStr = 'Total'
     else:
@@ -68,6 +72,14 @@ def generate_plot_var(cv_variable, normalise, cumulative):
 def reverse_lookup_col_idx(search_col, search_list):
     s = pd.Series(full_df[search_col].unique()).isin(search_list)
     return list(s[s].index)
+
+def apply_rmean(series, rmean):
+    if rmean == 0:
+        return series
+    else:
+        rmean = int(rmean_options[rmean])
+        series = pd.Series(series).rolling(window=rmean).mean()
+        return series
 
 app.layout = html.Div(className="container",children=
     [
@@ -90,11 +102,24 @@ app.layout = html.Div(className="container",children=
                 ]),
             dbc.Col(className="graph_controls", children=[
                 html.P(className="graph_controls", children='Normalisation'),
-                dcc.RadioItems(options=[{'label':'On', 'value':'enable'},
-                                        {'label':'Off', 'value':'disable'}],
-                               value='disable',
+                dcc.RadioItems(options=[{'label':'Simple', 'value':'simple'},
+                                        {'label':'Normalise', 'value':'normalise'},
+                                        {'label':'Percent', 'value':'percent'}],
+                               value='simple',
                                id='normalise',
                                labelStyle={'display': 'inline-block'}),
+                ]),
+            dbc.Col(className="graph_controls", children=[
+                html.P(className="graph_controls", children='Rolling mean'),
+                dcc.Dropdown(
+                    id='rollingMean',
+                    options=[{'label': item, 'value': idx } for idx, item in enumerate(rmean_options)],
+                    #value=[{'label':'deaths' 'value':1} for idx, colname],
+                    value=0,
+                    placeholder='Select Countries',
+                    multi=False,
+                    className="dropdown"
+                )
                 ]),
             dbc.Col(className="graph_controls", children=[
                 html.P('Countries:'),
@@ -105,7 +130,7 @@ app.layout = html.Div(className="container",children=
                     value=reverse_lookup_col_idx('Name', default_countries),
                     placeholder='Select Countries',
                     multi=True,
-                    className="side_controls"
+                    className="dropdown"
                 ),]),
             dbc.Col(className="graph_controls", children=[
                 html.P(className="graph_controls", children='Variables'),
@@ -214,9 +239,10 @@ def update_tableColumns(input_value):
     [Input(component_id='country_names', component_property='value'),
      Input(component_id='cv_variables', component_property='value'),
      Input(component_id='yscale_rb', component_property='value'),
-     Input(component_id='normalise', component_property='value')]
+     Input(component_id='normalise', component_property='value'),
+     Input(component_id='rollingMean', component_property='value')]
     )
-def update_topGraph(countries, cv_variable, yscale, normalise):
+def update_topGraph(countries, cv_variable, yscale, normalise, rmean):
     country_list_l = full_df['Name'].unique()[countries]
     plot_var = generate_plot_var(cv_variable, normalise, True)
     #plot_var = plot_vars[cv_variable]
@@ -244,9 +270,10 @@ def update_topGraph(countries, cv_variable, yscale, normalise):
     [Input(component_id='country_names', component_property='value'),
      Input(component_id='cv_variables', component_property='value'),
      Input(component_id='yscale_rb', component_property='value'),
-     Input(component_id='normalise', component_property='value')]
+     Input(component_id='normalise', component_property='value'),
+     Input(component_id='rollingMean', component_property='value')]
     )
-def update_testbox(countries, cv_variable, yscale, normalise):
+def update_testbox(countries, cv_variable, yscale, normalise, rmean):
     return generate_plot_var(cv_variable, normalise, True)
 
 @app.callback(
@@ -254,16 +281,18 @@ def update_testbox(countries, cv_variable, yscale, normalise):
     [Input(component_id='country_names', component_property='value'),
      Input(component_id='cv_variables', component_property='value'),
      Input(component_id='yscale_rb', component_property='value'),
-     Input(component_id='normalise', component_property='value')]
+     Input(component_id='normalise', component_property='value'),
+     Input(component_id='rollingMean', component_property='value')]
     )
-def update_bottomGraph(countries, cv_variable, yscale, normalise):
+def update_bottomGraph(countries, cv_variable, yscale, normalise, rmean):
     country_list_l = full_df['Name'].unique()[countries]
     plot_var = generate_plot_var(cv_variable, normalise, False)
     #plot_vars[cv_variable]
+
     figure={'data': [
                 dict(
                     x = full_df[full_df['Name']==country]['Date'],
-                    y = full_df[full_df['Name']==country][plot_var],
+                    y = apply_rmean(full_df[full_df['Name']==country][plot_var], rmean),
                     #'text': ['a', 'b', 'c', 'd'],
                     #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
                     name =  country,
@@ -274,7 +303,7 @@ def update_bottomGraph(countries, cv_variable, yscale, normalise):
             'layout': dict(
                 clickmode='event+select',
                 xaxis={'title': 'time'},
-                yaxis={'type': yscale, 'title':plot_var}
+                yaxis={'type': yscale, 'title':f"{plot_var} rmean:{rmean_options[rmean]}"}
             )
         }
     return figure
