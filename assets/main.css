@@ -30,6 +30,11 @@ div.bodyDiv {
   overflow: hidden;
 }
 
+.graph_controls {
+  width: 35%;
+  display:inline-block;
+}
+
 div.sidepanel {
   background-color: #7395ae;
   float: left;

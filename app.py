@@ -50,67 +50,115 @@ styles = {
     }
 }
 
-country_list = ['Spain', 'Italy', 'France', 'Germany', 'United States', 'China',
+default_countries = ['Spain', 'Italy', 'France', 'Germany', 'United States', 'China',
                 'United Kingdom', 'Korea, Rep.']
-plot_vars = ['Confirmed (Total)', 'Deaths (Total)', 'Recovered (Total)',
-       'Active (Total)', 'Confirmed (Total, normalised)',
-       'Deaths (Total, normalised)']
+plot_vars = ['Confirmed', 'Deaths', 'Recovered', 'Active']
+
+def generate_plot_var(cv_variable, normalise, cumulative):
+    norm_str = ""
+    if normalise == "enable":
+        norm_str = ", normalised"
+    if cumulative:
+        typeStr = 'Total'
+    else:
+        typeStr = 'Daily'
+    var_str = f"{plot_vars[cv_variable]} ({typeStr}{norm_str})"
+    return var_str
+
+def reverse_lookup_col_idx(search_col, search_list):
+    s = pd.Series(full_df[search_col].unique()).isin(search_list)
+    return list(s[s].index)
 
 app.layout = html.Div(className="container",children=
     [
-        dbc.Row(html.Div(className="masthead", children=
-        [
-            "masthead here"
-        ])),
+        # dbc.Row(html.Div(className="masthead", children=
+        # [
+        #     "masthead here"
+        # ])),
         dbc.Row(html.Div(
         [
-            html.H1('Progression over time'),
-            html.H3('Countries:'),
-            dcc.Dropdown(
-                id='country_names',
-                options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(full_df['Name'].unique())],
-                #value=[{'label':'deaths' 'value':1} for idx, colname],
-                value=[137,76,59,55],
-                placeholder='Select Countries',
-                multi=True,
-                className="side_controls"
+            html.H1(id="testbox", children=["testbox"]),
+            html.H3('Cross country comparisons'),
+
+            dbc.Col(className="graph_controls", children=[
+                html.P(className="graph_controls", children='Y Scale'),
+                dcc.RadioItems(options=[{'label':'Linear', 'value':'linear'},
+                                        {'label':'Log', 'value':'log'},],
+                               value='linear',
+                               id='yscale_rb',
+                               labelStyle={'display': 'inline-block'}),
+                ]),
+            dbc.Col(className="graph_controls", children=[
+                html.P(className="graph_controls", children='Normalisation'),
+                dcc.RadioItems(options=[{'label':'On', 'value':'enable'},
+                                        {'label':'Off', 'value':'disable'}],
+                               value='disable',
+                               id='normalise',
+                               labelStyle={'display': 'inline-block'}),
+                ]),
+            dbc.Col(className="graph_controls", children=[
+                html.P('Countries:'),
+                dcc.Dropdown(
+                    id='country_names',
+                    options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(full_df['Name'].unique())],
+                    #value=[{'label':'deaths' 'value':1} for idx, colname],
+                    value=reverse_lookup_col_idx('Name', default_countries),
+                    placeholder='Select Countries',
+                    multi=True,
+                    className="side_controls"
+                ),]),
+            dbc.Col(className="graph_controls", children=[
+                html.P(className="graph_controls", children='Variables'),
+                dcc.Dropdown(
+                    id='cv_variables',
+                    options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(plot_vars)],
+                    #value=[{'label':'deaths' 'value':1} for idx, colname],
+                    value=0,
+                    placeholder='Select Variables',
+                    multi=False,
+                    className="dropdown"
+                ),]
             ),
-            html.H3('Variables'),
-            dcc.Dropdown(
-                id='cv_variables',
-                options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(plot_vars)],
-                #value=[{'label':'deaths' 'value':1} for idx, colname],
-                value=0,
-                placeholder='Select Variables',
-                multi=False,
-                className="side_controls"
-            ),
-            dcc.Graph(id='progressionOverTime',
+            dcc.Graph(id='topGraph',
+                    figure={'data': [ dict(
+                                        x = full_df[full_df['Name']==country]['Date'],
+                                        y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', True)],
+                                        #'text': ['a', 'b', 'c', 'd'],
+                                        #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
+                                        name =  country,
+                                        mode = 'line',
+                                        marker =  {'size': 10}
+                                    ) for country in default_countries
+                                    ],
+                            'layout': dict(
+                                clickmode='event+select',
+                                xaxis={'type': 'date', 'title': 'time'},
+                                yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', True)},
+                                title="Cumulative"
+                            )
+                            }
+                    ),
+            #dcc.H3("BottomGraph"),
+            dcc.Graph(id='bottomGraph',
                     figure={'data': [
                                 dict(
                                     x = full_df[full_df['Name']==country]['Date'],
-                                    y = full_df[full_df['Name']==country]['Confirmed (Total)'],
+                                    y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', False)],
                                     #'text': ['a', 'b', 'c', 'd'],
                                     #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
                                     name =  country,
                                     mode = 'line',
                                     marker =  {'size': 10}
-                                ) for country in country_list
-                                # {
-                                #     'x': [1, 2, 3, 4],
-                                #     'y': [9, 4, 1, 4],
-                                #     'text': ['w', 'x', 'y', 'z'],
-                                #     'customdata': ['c.w', 'c.x', 'c.y', 'c.z'],
-                                #     'name': 'Trace 2',
-                                #     'mode': 'line',
-                                #     'marker': {'size': 12}
-                                # }
+                                ) for country in default_countries
                             ],
-                            'layout': {
-                                'clickmode': 'event+select'
+                            'layout': dict(
+                                clickmode='event+select',
+                                xaxis={'type': 'date', 'title': 'time'},
+                                yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', False)}
+                            )
                             }
-                        }
-                        ),
+                    ),
+
         ])),
         dbc.Row(html.Div(className="bodyDiv", children=
         [
@@ -162,13 +210,16 @@ def update_tableColumns(input_value):
         return [{"name": i, "id": i} for i in [full_df.columns[0]]]
 
 @app.callback(
-    Output(component_id='progressionOverTime', component_property='figure'),
+    Output(component_id='topGraph', component_property='figure'),
     [Input(component_id='country_names', component_property='value'),
-     Input(component_id='cv_variables', component_property='value')]
+     Input(component_id='cv_variables', component_property='value'),
+     Input(component_id='yscale_rb', component_property='value'),
+     Input(component_id='normalise', component_property='value')]
     )
-def update_graphCountries(countries, cv_variable):
+def update_topGraph(countries, cv_variable, yscale, normalise):
     country_list_l = full_df['Name'].unique()[countries]
-    plot_var = plot_vars[cv_variable]
+    plot_var = generate_plot_var(cv_variable, normalise, True)
+    #plot_var = plot_vars[cv_variable]
     figure={'data': [
                 dict(
                     x = full_df[full_df['Name']==country]['Date'],
@@ -179,31 +230,54 @@ def update_graphCountries(countries, cv_variable):
                     mode = 'line',
                     marker =  {'size': 10}
                 ) for country in country_list_l
-                # {
-                #     'x': [1, 2, 3, 4],
-                #     'y': [9, 4, 1, 4],
-                #     'text': ['w', 'x', 'y', 'z'],
-                #     'customdata': ['c.w', 'c.x', 'c.y', 'c.z'],
-                #     'name': 'Trace 2',
-                #     'mode': 'line',
-                #     'marker': {'size': 12}
-                # }
             ],
-            'layout': {
-                'clickmode': 'event+select'
-            }
+            'layout': dict(
+                clickmode='event+select',
+                xaxis={'title': 'time'},
+                yaxis={'type': yscale, 'title':plot_var}
+            )
         }
     return figure
-    # if len(input_value) != 0:
-    #     return [{"name": i, "id": i} for i in full_df.columns[input_value]]
-    # else:
-    #     return [{"name": i, "id": i} for i in [full_df.columns[0]]]
-    # if len(input_value) == 1:
-    #     return input_value
-    # else:
-    #     return ", ".join(input_value)
 
+@app.callback(
+    Output(component_id='testbox', component_property='children'),
+    [Input(component_id='country_names', component_property='value'),
+     Input(component_id='cv_variables', component_property='value'),
+     Input(component_id='yscale_rb', component_property='value'),
+     Input(component_id='normalise', component_property='value')]
+    )
+def update_testbox(countries, cv_variable, yscale, normalise):
+    return generate_plot_var(cv_variable, normalise, True)
 
+@app.callback(
+    Output(component_id='bottomGraph', component_property='figure'),
+    [Input(component_id='country_names', component_property='value'),
+     Input(component_id='cv_variables', component_property='value'),
+     Input(component_id='yscale_rb', component_property='value'),
+     Input(component_id='normalise', component_property='value')]
+    )
+def update_bottomGraph(countries, cv_variable, yscale, normalise):
+    country_list_l = full_df['Name'].unique()[countries]
+    plot_var = generate_plot_var(cv_variable, normalise, False)
+    #plot_vars[cv_variable]
+    figure={'data': [
+                dict(
+                    x = full_df[full_df['Name']==country]['Date'],
+                    y = full_df[full_df['Name']==country][plot_var],
+                    #'text': ['a', 'b', 'c', 'd'],
+                    #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
+                    name =  country,
+                    mode = 'line',
+                    marker =  {'size': 10}
+                ) for country in country_list_l
+            ],
+            'layout': dict(
+                clickmode='event+select',
+                xaxis={'title': 'time'},
+                yaxis={'type': yscale, 'title':plot_var}
+            )
+        }
+    return figure
 
 # @app.callback(
 #     Output('datatable-interactivity', 'style_data_conditional'),
