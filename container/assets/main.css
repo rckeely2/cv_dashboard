@@ -3,12 +3,12 @@ html {
     border-width: 0px;
     margin: 0px 0px 0px 0px;
     padding: 0px 0px 0px 0px;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 body {
   height: 100%;
-  overflow: hidden;
+  /* overflow: hidden; */
   border-width: 0px;
   margin: 0px 0px 0px 0px;
   padding: 0px 0px 0px 0px;
@@ -24,6 +24,12 @@ div.masthead {
   color: #ffffff;
 }
 
+div.bodyDiv {
+  float: center;
+  width: 80;
+  overflow: hidden;
+}
+
 div.sidepanel {
   background-color: #7395ae;
   float: left;
@@ -35,13 +41,13 @@ div.sidepanel {
 }
 
 div.mainpanel {
-  float: right;
+  float: center;
   background-color: #ffffff;
   margin: 0px 0px 0px 0px;
   padding: 20px 20px 20px 20px;
   border-width: 0px;
-  width: 74%;
-  height: 100vh;
+  width: 90%;
+  /* height: 100vh; */
 }
 
 .table {
