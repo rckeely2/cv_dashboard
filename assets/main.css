@@ -3,22 +3,20 @@ html {
     border-width: 0px;
     margin: 0px 0px 0px 0px;
     padding: 0px 0px 0px 0px;
-    /* overflow: hidden; */
 }
 
-* {
+/* * {
   box-sizing: border-box;
-}
+} */
 
-body {
+/* body {
   height: 100%;
-  /* overflow: hidden; */
   border-width: 0px;
   margin: 0px 0px 0px 0px;
   padding: 0px 0px 0px 0px;
-}
+} */
 
-div.masthead {
+/* div.masthead {
   background-color: #cccccc;
   width: 100%;
   border-width: 0px;
@@ -26,17 +24,17 @@ div.masthead {
   padding: -10px;
   vertical-align: middle;
   color: #ffffff;
-}
+} */
 
-div.inline_div {
+/* div.inline_div {
   display:inline-block;
-}
+} */
 
-div.bodyDiv {
+/* div.bodyDiv {
   float: center;
   width: 80;
   overflow: hidden;
-}
+} */
 
 /* .graph_controls {
   width: 30%;
@@ -49,7 +47,7 @@ div.bodyDiv {
   display:inline;
 } */
 
-div.sidepanel {
+/* div.sidepanel {
   background-color: #7395ae;
   float: left;
   width: 20%;
@@ -71,7 +69,6 @@ div.mainpanel {
   padding: 20px 20px 20px 20px;
   border-width: 0px;
   width: 90%;
-  /* height: 100vh; */
 }
 
 .table {
@@ -91,4 +88,4 @@ div.footer {
 
 h3.subcomponent {
   color : #ffffff;
-}
+} */
