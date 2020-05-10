@@ -7,6 +7,8 @@ from dash.dependencies import Input, Output
 
 import fetch_data
 
+import ast
+from urllib.parse import urlparse, parse_qsl, urlencode
 import json
 import urllib.request
 import sys
@@ -21,11 +23,11 @@ from bs4 import BeautifulSoup
 
 # def create_layout():
 #     return
-
 full_df, cv_merged_df, iso_codes_df, indicator_df = fetch_data.fetch_all(purge=False)
 #snapshot = fetch_data.get_latest(full_df)
 
 app = dash.Dash(__name__)
+app.config.suppress_callback_exceptions = True
 # app.layout = html.Div(className="container",
 #                                 children=[
 #                                     #snapshot.shape[0],
@@ -163,164 +165,235 @@ app.layout = html.Div(className="container",children=
         #     "masthead here"
         # ])),
         dcc.Location(id='url', refresh=False),
-        dbc.Row(html.Div(
-        [
-            html.H1(id="testbox", children=["testbox"]),
-            html.H3('Cross country comparisons'),
+        html.Div(id='page-layout')
+    ])
 
-            dbc.Col(className="graph_controls", children=[
-                html.P(className="graph_controls", children='Y Scale'),
-                dcc.RadioItems(options=[{'label':'Linear', 'value':'linear'},
-                                        {'label':'Log', 'value':'log'},],
-                               value='linear',
-                               id='yscale_rb',
-                               labelStyle={'display': 'inline-block'}),
-                ]),
-            dbc.Col(className="graph_controls", children=[
-                html.P(className="graph_controls", children='Normalisation'),
-                dcc.RadioItems(options=[{'label':'Simple', 'value':'simple'},
-                                        {'label':'Normalise', 'value':'normalise'},
-                                        {'label':'Percent', 'value':'percent'}],
-                               value='simple',
-                               id='normalise',
-                               labelStyle={'display': 'inline-block'}),
-                ]),
-            dbc.Col(className="graph_controls", children=[
-                html.P(className="graph_controls", children='Cumulative Threshold'),
-                dcc.Dropdown(id="threshold_cumulative",
-                             options=[{'label':'None', 'value':0},
-                                      {'label':'100', 'value':100},
-                                      {'label':'500', 'value':500},
-                                      {'label':'1000', 'value':1000}],
-                             placeholder='Select threshold',
-                             value=0,
-                             )
-                ]),
-            dbc.Col(className="graph_controls", children=[
-                html.P(className="graph_controls", children='Daily Threshold'),
-                dcc.Dropdown(id="threshold_daily",
-                             options=[{'label':'None', 'value':0},
-                                      {'label':'25', 'value':25},
-                                      {'label':'100', 'value':100},
-                                      {'label':'250', 'value':250}],
-                             placeholder='Select threshold',
-                             value=0,
-                             )
-                ]),
-            dbc.Col(className="graph_controls", children=[
-                html.P(className="graph_controls", children='Rolling mean'),
-                dcc.Dropdown(
-                    id='rollingMean',
-                    options=[{'label': item, 'value': idx } for idx, item in enumerate(rmean_options)],
-                    #value=[{'label':'deaths' 'value':1} for idx, colname],
-                    value=0,
-                    placeholder='Select Countries',
-                    multi=False,
-                    className="dropdown"
-                )
-                ]),
-            dbc.Col(className="graph_controls", children=[
-                html.P('Countries:'),
-                dcc.Dropdown(
-                    id='country_names',
-                    options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(full_df['Name'].unique())],
-                    #value=[{'label':'deaths' 'value':1} for idx, colname],
-                    value=reverse_lookup_col_idx('Name', default_countries),
-                    placeholder='Select Countries',
-                    multi=True,
-                    className="dropdown"
-                ),]),
-            dbc.Col(className="graph_controls", children=[
-                html.P(className="graph_controls", children='Variables'),
-                dcc.Dropdown(
-                    id='cv_variables',
-                    options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(plot_vars)],
-                    #value=[{'label':'deaths' 'value':1} for idx, colname],
-                    value=0,
-                    placeholder='Select Variables',
-                    multi=False,
-                    className="dropdown"
-                ),]
-            ),
-            dcc.Graph(id='topGraph',
-                    figure={'data': [ dict(
-                                        x = full_df[full_df['Name']==country]['Date'],
-                                        y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', True)],
-                                        #'text': ['a', 'b', 'c', 'd'],
-                                        #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-                                        name =  country,
-                                        mode = 'line',
-                                        marker =  {'size': 10}
-                                    ) for country in default_countries
-                                    ],
-                            'layout': dict(
-                                clickmode='event+select',
-                                xaxis={'type': 'date', 'title': 'time'},
-                                yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', True)},
-                                title="Cumulative"
-                            )
-                            }
-                    ),
-            #dcc.H3("BottomGraph"),
-            dcc.Graph(id='bottomGraph',
-                    figure={'data': [
-                                dict(
+def apply_default_value(params):
+    def wrapper(func):
+        def apply_value(*args, **kwargs):
+            if 'id' in kwargs and kwargs['id'] in params:
+                if ((component_ids[kwargs['id']]['value_type'] == 'numeric') or \
+                    (component_ids[kwargs['id']]['component'] == 'multi_dd')):
+                    kwargs['value'] = ast.literal_eval((params[kwargs['id']]))
+                # elif :
+                #     kwargs['value'] = ast.literal_eval((params[kwargs['id']]))
+                else:
+                    kwargs['value'] = params[kwargs['id']]
+            return func(*args, **kwargs)
+        return apply_value
+    return wrapper
+
+component_ids = {
+    'yscale_rb' : {'component' : 'radioButton', 'value_type': 'text'},
+    'normalise' : {'component' : 'radioButton', 'value_type': 'text'},
+    'threshold_cumulative' : {'component' : 'single_dd', 'value_type': 'numeric'},
+    'threshold_daily' : {'component' : 'single_dd', 'value_type': 'numeric'},
+    'rollingMean' : {'component' : 'single_dd', 'value_type': 'numeric'},
+    'country_names' : {'component' : 'multi_dd', 'value_type': 'text'},
+    'cv_variables' : {'component' : 'single_dd', 'value_type': 'numeric'},
+    # 'single_dd' : {'component' : 'single_dd', 'value_type': 'text'},
+    # 'multi_dd' : {'component' : 'multi_dd', 'value_type': 'text'},
+    # 'input' : {'component' : 'input', 'value_type': 'text'},
+    # #'topMap' : {'component' : 'slider', 'value_type': 'numeric'},
+    # 'range' : {'component' : 'rangeSlider', 'value_type': 'numeric'},
+    # 'radioButton' : {'component' : 'radioButton', 'value_type': 'numeric'}
+}
+
+def build_layout(params):
+    layout = [
+
+    dbc.Row(html.Div(
+    [
+        html.H1(id="testbox", children=["testbox"]),
+        html.H3('Cross country comparisons'),
+        # html.H2('URL State demo', id='state'),
+        # apply_default_value(params)(dcc.Dropdown)(
+        #     id='single_dd',
+        #     options=[{'label': i, 'value': i} for i in ['LA', 'NYC', 'MTL']],
+        #     value='LA',
+        #     multi=False
+        # ),
+        dbc.Col(className="graph_controls", children=[
+            html.P(className="graph_controls", children='Y Scale'),
+            apply_default_value(params)(dcc.RadioItems)(
+                options=[{'label':'Linear', 'value':'linear'},
+                        {'label':'Log', 'value':'log'},],
+               value='linear',
+               id='yscale_rb',
+               labelStyle={'display': 'inline-block'}),
+               ]),
+        dbc.Col(className="graph_controls", children=[
+            html.P(className="graph_controls", children='Normalisation'),
+            apply_default_value(params)(dcc.RadioItems)(
+                options=[{'label':'Simple', 'value':'simple'},
+                        {'label':'Normalise', 'value':'normalise'},
+                        {'label':'Percent', 'value':'percent'}],
+                value='simple',
+                id='normalise',
+                labelStyle={'display': 'inline-block'}
+                ),
+            ]),
+        dbc.Col(className="graph_controls", children=[
+            html.P(className="graph_controls", children='Cumulative Threshold'),
+            apply_default_value(params)(dcc.Dropdown)(
+                id="threshold_cumulative",
+                 options=[{'label':'None', 'value':0},
+                          {'label':'100', 'value':100},
+                          {'label':'500', 'value':500},
+                          {'label':'1000', 'value':1000}],
+                 placeholder='Select threshold',
+                 value=0,
+                 )
+            ]),
+        dbc.Col(className="graph_controls", children=[
+            html.P(className="graph_controls", children='Daily Threshold'),
+            apply_default_value(params)(dcc.Dropdown)(
+                id="threshold_daily",
+                 options=[{'label':'None', 'value':0},
+                          {'label':'25', 'value':25},
+                          {'label':'100', 'value':100},
+                          {'label':'250', 'value':250}],
+                 placeholder='Select threshold',
+                 value=0,
+                 )
+            ]),
+        dbc.Col(className="graph_controls", children=[
+            html.P(className="graph_controls", children='Rolling mean'),
+            apply_default_value(params)(dcc.Dropdown)(
+                id='rollingMean',
+                options=[{'label': item, 'value': idx } for idx, item in enumerate(rmean_options)],
+                #value=[{'label':'deaths' 'value':1} for idx, colname],
+                value=0,
+                placeholder='Select Countries',
+                multi=False,
+                className="dropdown"
+            )
+            ]),
+        dbc.Col(className="graph_controls", children=[
+            html.P('Countries:'),
+            apply_default_value(params)(dcc.Dropdown)(
+                id='country_names',
+                options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(full_df['Name'].unique())],
+                #value=[{'label':'deaths' 'value':1} for idx, colname],
+                value=reverse_lookup_col_idx('Name', default_countries),
+                placeholder='Select Countries',
+                multi=True,
+                className="dropdown"
+            ),]),
+        dbc.Col(className="graph_controls", children=[
+            html.P(className="graph_controls", children='Variables'),
+            apply_default_value(params)(dcc.Dropdown)(
+                id='cv_variables',
+                options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(plot_vars)],
+                #value=[{'label':'deaths' 'value':1} for idx, colname],
+                value=0,
+                placeholder='Select Variables',
+                multi=False,
+                className="dropdown"
+            ),]
+        ),
+        dcc.Graph(id='topGraph',
+                figure={'data': [ dict(
                                     x = full_df[full_df['Name']==country]['Date'],
-                                    y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', False)],
+                                    y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', True)],
                                     #'text': ['a', 'b', 'c', 'd'],
                                     #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
                                     name =  country,
                                     mode = 'line',
                                     marker =  {'size': 10}
                                 ) for country in default_countries
-                            ],
-                            'layout': dict(
-                                clickmode='event+select',
-                                xaxis={'type': 'date', 'title': 'time'},
-                                yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', False)}
-                            )
-                            }
-                    ),
+                                ],
+                        'layout': dict(
+                            clickmode='event+select',
+                            xaxis={'type': 'date', 'title': 'time'},
+                            yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', True)},
+                            title="Cumulative"
+                        )
+                        }
+                ),
+        #dcc.H3("BottomGraph"),
+        dcc.Graph(id='bottomGraph',
+                figure={'data': [
+                            dict(
+                                x = full_df[full_df['Name']==country]['Date'],
+                                y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', False)],
+                                #'text': ['a', 'b', 'c', 'd'],
+                                #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
+                                name =  country,
+                                mode = 'line',
+                                marker =  {'size': 10}
+                            ) for country in default_countries
+                        ],
+                        'layout': dict(
+                            clickmode='event+select',
+                            xaxis={'type': 'date', 'title': 'time'},
+                            yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', False)}
+                        )
+                        }
+                ),
 
-        ])),
-        dbc.Row(html.Div(className="bodyDiv", children=
-        [
-            html.Div(className="tableCont",children=
-            [
-                html.H1('Data Table'),
-                html.H3('Select Columns:'),
-                #html.H3('Selected Columns:', className="subcomponent"),
-                dcc.Dropdown(
-                    id='table_dropdown_select',
-                    options=[{'label': colname, 'value': idx} for idx, colname in enumerate(full_df.columns)],
-                    #value=[{'label':'deaths' 'value':1} for idx, colname],
-                    value=[5,3,7,8,11,12,16,22,13,17,23,14,24,15,25],
-                    placeholder='Select Columns',
-                    multi=True,
-                    className="side_controls"
-                ),
-                dash_table.DataTable(
-                id='table',
-                columns=[{"name": i, "id": i} for i in full_df.columns],
-                #columns=[],
-                data=full_df.to_dict('records'),
-                editable=True,
-                filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                column_selectable="single",
-                row_selectable="multi",
-                selected_columns=[],
-                selected_rows=[],
-                page_action="native",
-                page_size=20,
-                style_table={'overflowX': 'scroll', 'padding': '10px'},
-                ),
-                html.Div(id="datatable-interactivity-container")
-            ]),
-        ])),
-        dbc.Row(html.Div(className="footer", children=["footer"])),
-    ])
+    ])),
+    # dbc.Row(html.Div(className="bodyDiv", children=
+    # [
+    #     html.Div(className="tableCont",children=
+    #     [
+    #         html.H1('Data Table'),
+    #         html.H3('Select Columns:'),
+    #         #html.H3('Selected Columns:', className="subcomponent"),
+    #         dcc.Dropdown(
+    #             id='table_dropdown_select',
+    #             options=[{'label': colname, 'value': idx} for idx, colname in enumerate(full_df.columns)],
+    #             #value=[{'label':'deaths' 'value':1} for idx, colname],
+    #             value=[5,3,7,8,11,12,16,22,13,17,23,14,24,15,25],
+    #             placeholder='Select Columns',
+    #             multi=True,
+    #             className="side_controls"
+    #         ),
+    #         dash_table.DataTable(
+    #         id='table',
+    #         columns=[{"name": i, "id": i} for i in full_df.columns],
+    #         #columns=[],
+    #         data=full_df.to_dict('records'),
+    #         editable=True,
+    #         filter_action="native",
+    #         sort_action="native",
+    #         sort_mode="multi",
+    #         column_selectable="single",
+    #         row_selectable="multi",
+    #         selected_columns=[],
+    #         selected_rows=[],
+    #         page_action="native",
+    #         page_size=20,
+    #         style_table={'overflowX': 'scroll', 'padding': '10px'},
+    #         ),
+    #         html.Div(id="datatable-interactivity-container")
+    #     ]),
+    # ])),
+    # dbc.Row(html.Div(className="footer", children=["footer"])),
+    ]
+    return layout
+
+
+def parse_state(url):
+    parse_result = urlparse(url)
+    params = parse_qsl(parse_result.query)
+    state = dict(params)
+    return state
+
+@app.callback(Output('page-layout', 'children'),
+              inputs=[Input('url', 'href')])
+def page_load(href):
+    if not href:
+        return []
+    state = parse_state(href)
+    return build_layout(state)
+
+@app.callback(Output('url', 'search'),
+              inputs=[Input(i, 'value') for i in component_ids])
+def update_url_state(*values):
+    state = urlencode(dict(zip(component_ids.keys(), values)))
+    return f'?{state}'
+
 
 @app.callback(
     Output(component_id='table', component_property='columns'),
