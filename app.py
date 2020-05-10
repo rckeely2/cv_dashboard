@@ -21,29 +21,10 @@ import bisect
 import math
 from bs4 import BeautifulSoup
 
-# def create_layout():
-#     return
 full_df, cv_merged_df, iso_codes_df, indicator_df = fetch_data.fetch_all(purge=False)
-#snapshot = fetch_data.get_latest(full_df)
 
-app = dash.Dash(__name__)
+app = dash.Dash("CV Dashboard")
 app.config.suppress_callback_exceptions = True
-# app.layout = html.Div(className="container",
-#                                 children=[
-#                                     #snapshot.shape[0],
-#                                     html.Div(className="render_div", children=
-#                                             dbc.Table.from_dataframe(df=snapshot,
-#                                             id="main_table"))])
-
-#column_set = ["deaths_total", "confirmed_total",
-#             "deaths_total_norm", "confirmed_total_norm", ]
-
-# full_df.head()
-
-# print(full_df.loc[full_df["Country/Region"]=='United States'])
-
-# def map_columns(column_names):
-#     pass
 
 styles = {
     'pre': {
@@ -101,7 +82,8 @@ def generate_x(series, threshold):
     else:
         return list(range(1,len(series)+1))
 
-def generate_single_data(country, threshold, rmean, cv_variable, normalise, cumulative):
+def generate_single_data(country, threshold, rmean,
+                        cv_variable, normalise, cumulative):
     plot_vars_l = [ generate_plot_var(i, normalise, cumulative) for i in range(len(plot_vars))]
     plot_dict = [dict(
         x = generate_x(full_df[full_df['Name']==country]['Date'],threshold),
@@ -202,10 +184,12 @@ component_ids = {
 def build_layout(params):
     layout = [
 
+    # dbc.
+    # Row 1
     dbc.Row(html.Div(
     [
-        html.H1(id="testbox", children=["testbox"]),
-        html.H3('Cross country comparisons'),
+        #html.H1(id="testbox", children=["testbox"]),
+        #html.H3('Cross country comparisons'),
         # html.H2('URL State demo', id='state'),
         # apply_default_value(params)(dcc.Dropdown)(
         #     id='single_dd',
@@ -213,16 +197,18 @@ def build_layout(params):
         #     value='LA',
         #     multi=False
         # ),
-        dbc.Col(className="graph_controls", children=[
-            html.P(className="graph_controls", children='Y Scale'),
-            apply_default_value(params)(dcc.RadioItems)(
-                options=[{'label':'Linear', 'value':'linear'},
-                        {'label':'Log', 'value':'log'},],
-               value='linear',
-               id='yscale_rb',
-               labelStyle={'display': 'inline-block'}),
-               ]),
-        dbc.Col(className="graph_controls", children=[
+        dbc.Col(className="graph_controls", width=2, children=[
+            html.Div(className="inline_div", children=[
+                html.P(className="graph_controls", children='Y Scale'),
+                apply_default_value(params)(dcc.RadioItems)(
+                    options=[{'label':'Linear', 'value':'linear'},
+                            {'label':'Log', 'value':'log'},],
+                   value='linear',
+                   id='yscale_rb',
+                   labelStyle={'display': 'inline-block'}
+                   ),]),
+            ]),
+        dbc.Col(className="graph_controls", width=4, children=[
             html.P(className="graph_controls", children='Normalisation'),
             apply_default_value(params)(dcc.RadioItems)(
                 options=[{'label':'Simple', 'value':'simple'},
@@ -233,7 +219,7 @@ def build_layout(params):
                 labelStyle={'display': 'inline-block'}
                 ),
             ]),
-        dbc.Col(className="graph_controls", children=[
+        dbc.Col(className="graph_controls", width=4, children=[
             html.P(className="graph_controls", children='Cumulative Threshold'),
             apply_default_value(params)(dcc.Dropdown)(
                 id="threshold_cumulative",
@@ -245,7 +231,11 @@ def build_layout(params):
                  value=0,
                  )
             ]),
-        dbc.Col(className="graph_controls", children=[
+        ])),
+    # Row 2
+        dbc.Row(html.Div(
+        [
+        dbc.Col(className="graph_controls", width=4, children=[
             html.P(className="graph_controls", children='Daily Threshold'),
             apply_default_value(params)(dcc.Dropdown)(
                 id="threshold_daily",
@@ -257,7 +247,7 @@ def build_layout(params):
                  value=0,
                  )
             ]),
-        dbc.Col(className="graph_controls", children=[
+        dbc.Col(className="graph_controls", width=4, children=[
             html.P(className="graph_controls", children='Rolling mean'),
             apply_default_value(params)(dcc.Dropdown)(
                 id='rollingMean',
@@ -292,6 +282,9 @@ def build_layout(params):
                 className="dropdown"
             ),]
         ),
+    ])),
+    dbc.Row(html.Div(
+    [
         dcc.Graph(id='topGraph',
                 figure={'data': [ dict(
                                     x = full_df[full_df['Name']==country]['Date'],

@@ -6,6 +6,10 @@ html {
     /* overflow: hidden; */
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   height: 100%;
   /* overflow: hidden; */
@@ -24,16 +28,26 @@ div.masthead {
   color: #ffffff;
 }
 
+div.inline_div {
+  display:inline-block;
+}
+
 div.bodyDiv {
   float: center;
   width: 80;
   overflow: hidden;
 }
 
-.graph_controls {
+/* .graph_controls {
   width: 30%;
   display:inline-block;
-}
+  float:right;
+} */
+
+/* p.graph_controls {
+  float:left
+  display:inline;
+} */
 
 div.sidepanel {
   background-color: #7395ae;
@@ -44,6 +58,7 @@ div.sidepanel {
   padding: 20px 20px 20px 20px;
   border-width: 0px;
 }
+
 p {
   white-space: nowrap;
   display:inline-block;
