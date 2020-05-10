@@ -162,9 +162,10 @@ app.layout = html.Div(className="container",children=
         # [
         #     "masthead here"
         # ])),
+        dcc.Location(id='url', refresh=False),
         dbc.Row(html.Div(
         [
-            #html.H1(id="testbox", children=["testbox"]),
+            html.H1(id="testbox", children=["testbox"]),
             html.H3('Cross country comparisons'),
 
             dbc.Col(className="graph_controls", children=[
@@ -344,28 +345,6 @@ def update_topGraph(countries, cv_variable, yscale, normalise, rmean, threshold)
     cumulative = True
     figure = plot_figure(countries, cv_variable, yscale, normalise, rmean, threshold, cumulative)
     return figure
-    # country_list_l = full_df['Name'].unique()[countries]
-    #
-    # plot_var = generate_plot_var(cv_variable, normalise, cumulative)
-    # #plot_var = plot_vars[cv_variable]
-    # figure={'data': [
-    #             dict(
-    #                 x = full_df[full_df['Name']==country]['Date'],
-    #                 y = full_df[full_df['Name']==country][plot_var],
-    #                 #'text': ['a', 'b', 'c', 'd'],
-    #                 #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-    #                 name =  country,
-    #                 mode = 'line',
-    #                 marker =  {'size': 10}
-    #             ) for country in country_list_l
-    #         ],
-    #         'layout': dict(
-    #             clickmode='event+select',
-    #             xaxis={'title': 'time'},
-    #             yaxis={'type': yscale, 'title':plot_var}
-    #         )
-    #     }
-    # return figure
 
 @app.callback(
     Output(component_id='bottomGraph', component_property='figure'),
@@ -380,19 +359,6 @@ def update_bottomGraph(countries, cv_variable, yscale, normalise, rmean, thresho
     cumulative = False
     figure = plot_figure(countries, cv_variable, yscale, normalise, rmean, threshold, cumulative)
     return figure
-
-
-
-# @app.callback(
-#     Output('datatable-interactivity', 'style_data_conditional'),
-#     [Input('datatable-interactivity', 'selected_columns')]
-# )
-# def update_styles(selected_columns):
-#     return [{
-#         'if': { 'column_id': i },
-#         'background_color': '#D2F3FF'
-#     } for i in selected_columns]
-
 
 if __name__ == "__main__":
     app.run_server(port=8050, host="127.0.0.1", debug=True)
