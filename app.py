@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 
 full_df, cv_merged_df, iso_codes_df, indicator_df = fetch_data.fetch_all(purge=False)
 
-app = dash.Dash("CV Dashboard", external_stylesheets=[dbc.themes.CERULEAN])
+app = dash.Dash("CV Dashboard", external_stylesheets=[dbc.themes.SUPERHERO])
 app.config.suppress_callback_exceptions = True
 
 styles = {
@@ -50,6 +50,7 @@ def generate_plot_var(cv_variable, normalise, cumulative):
     else:
         typeStr = 'Daily'
     var_str = f"{plot_vars[cv_variable]} ({typeStr}{norm_str})"
+    #var_str = f"{plot_vars[cv_variable]}"
     return var_str
 
 def reverse_lookup_col_idx(search_col, search_list):
@@ -121,7 +122,8 @@ def generate_layout(threshold, rmean, yscale, cv_variable, normalise, cumulative
     layout_dict = dict(
         clickmode='event+select',
         xaxis=xaxis_val,
-        yaxis={'type': yscale, 'title':f"{plot_var} rmean:{rmean_options[rmean]} threshold:{threshold}"})
+        #yaxis={'type': yscale, 'title':f"{plot_var} rmean:{rmean_options[rmean]} threshold:{threshold}"})
+        yaxis={'type': yscale, 'title':f"{plot_var}"})
     return layout_dict
 
 def generate_data(country_list_l, threshold, rmean, cv_variable, normalise, cumulative):
@@ -182,7 +184,7 @@ def build_layout(params):
     layout = [
         dbc.ButtonGroup([
             # dbc.Button("Cumulative", id="cumPlot_button", className="mb-3", color="primary", ),
-            # dbc.Button("Daily", id="dailyPlot_button", className="mb-3", color="secondary", ),
+            dbc.Button("Daily", id="dailyPlot_button", className="mb-3", color="secondary", ),
             dbc.Button("Data", id="data_button", className="mb-3", color="primary",),
             dbc.Button("Filters", id="filter_button",  className="mb-3", color="primary"),
             dbc.Button("Transforms", id="transform_button", className="mb-3", color="primary",),
@@ -370,7 +372,10 @@ def build_layout(params):
                                 clickmode='event+select',
                                 xaxis={'type': 'date', 'title': 'time'},
                                 yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', True)},
-                                title="Cumulative"
+                                title="Cumulative",
+                                margin={'t': 0, 'pad':0},
+                                #margin=dict(l=20, r=20, t=20, b=20),
+                                #height= 800,
                             )
                             }
                     ),
@@ -395,195 +400,19 @@ def build_layout(params):
                                 ) for country in default_countries
                             ],
                             'layout': dict(
-                                height=200 ,
+                                #height= 2000,
                                 clickmode='event+select',
                                 xaxis={'type': 'date', 'title': 'time'},
-                                yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', False)}
+                                yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', False)},
+                                margin={'t': 0, 'pad':0},
+                                #margin=dict(l=20, r=20, t=20, b=20),
                             )
                             }
                     ),
         ),
-        #],
-            # id="dailyPlot_collapse",
-        # ),
-
-    # Row 1
-    # dbc.Row(children=[
-    #     #html.H1(id="testbox", children=["testbox"]),
-    #     #html.H3('Cross country comparisons'),
-    #     # html.H2('URL State demo', id='state'),
-    #     # apply_default_value(params)(dcc.Dropdown)(
-    #     #     id='single_dd',
-    #     #     options=[{'label': i, 'value': i} for i in ['LA', 'NYC', 'MTL']],
-    #     #     value='LA',
-    #     #     multi=False
-    #     # ),
-    #     dbc.Col(className="graph_controls", width=2, children=[
-    #         html.Div(className="inline_div", children=[
-    # #             html.P(className="graph_controls", children='Y Scale'),
-    #             apply_default_value(params)(dcc.RadioItems)(
-    #                 options=[{'label':'Linear', 'value':'linear'},
-    #                         {'label':'Log', 'value':'log'},],
-    #                value='linear',
-    #                id='yscale_rb',
-    #                labelStyle={'display': 'inline-block'}
-    #                ),]),
-    #         ]),
-    #     dbc.Col(className="graph_controls", width=4, children=[
-    #         html.P(className="graph_controls", children='Normalisation'),
-    #         apply_default_value(params)(dcc.RadioItems)(
-    #             options=[{'label':'Simple', 'value':'simple'},
-    #                     {'label':'Normalise', 'value':'normalise'},
-    #                     {'label':'Percent', 'value':'percent'}],
-    #             value='simple',
-    #             id='normalise',
-    #             labelStyle={'display': 'inline-block'}
-    #             ),
-    #         ]),
-    #     dbc.Col(className="graph_controls", width=4, children=[
-    #         html.P(className="graph_controls", children='Cumulative Threshold'),
-    #         apply_default_value(params)(dcc.Dropdown)(
-    #             id="threshold_cumulative",
-    #              options=[{'label':'None', 'value':0},
-    #                       {'label':'100', 'value':100},
-    #                       {'label':'500', 'value':500},
-    #                       {'label':'1000', 'value':1000}],
-    #              placeholder='Select threshold',
-    #              value=0,
-    #              )
-    #         ]),
-    #     ]),
-    # Row 2
-    #     dbc.Row(html.Div(
-    #     [
-    #         dbc.Col(className="graph_controls", width=4, children=[
-    #             html.P(className="graph_controls", children='Daily Threshold'),
-    #             apply_default_value(params)(dcc.Dropdown)(
-    #                 id="threshold_daily",
-    #                  options=[{'label':'None', 'value':0},
-    #                           {'label':'25', 'value':25},
-    #                           {'label':'100', 'value':100},
-    #                           {'label':'250', 'value':250}],
-    #                  placeholder='Select threshold',
-    #                  value=0,
-    #                  )
-    #             ]),
-    #         dbc.Col(className="graph_controls", width=4, children=[
-    #             html.P(className="graph_controls", children='Rolling mean'),
-    #             apply_default_value(params)(dcc.Dropdown)(
-    #                 id='rollingMean',
-    #                 options=[{'label': item, 'value': idx } for idx, item in enumerate(rmean_options)],
-    #                 #value=[{'label':'deaths' 'value':1} for idx, colname],
-    #                 value=0,
-    #                 placeholder='Select Countries',
-    #                 multi=False,
-    #                 className="dropdown"
-    #             )
-    #             ]),
-    #         dbc.Col(className="graph_controls", children=[
-    #             html.P('Countries:'),
-    #             apply_default_value(params)(dcc.Dropdown)(
-    #                 id='country_names',
-    #                 options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(full_df['Name'].unique())],
-    #                 #value=[{'label':'deaths' 'value':1} for idx, colname],
-    #                 value=reverse_lookup_col_idx('Name', default_countries),
-    #                 placeholder='Select Countries',
-    #                 multi=True,
-    #                 className="dropdown"
-    #             ),]),
-    #         dbc.Col(className="graph_controls", children=[
-    #             html.P(className="graph_controls", children='Variables'),
-    #             apply_default_value(params)(dcc.Dropdown)(
-    #                 id='cv_variables',
-    #                 options=[{'label': country_name, 'value': idx} for idx, country_name in enumerate(plot_vars)],
-    #                 #value=[{'label':'deaths' 'value':1} for idx, colname],
-    #                 value=0,
-    #                 placeholder='Select Variables',
-    #                 multi=False,
-    #                 className="dropdown"
-    #             ),]
-    #     ),
-    # ])),
-    # dbc.Row(html.Div(
-    # [
-    #     dcc.Graph(id='topGraph',
-    #             figure={'data': [ dict(
-    #                                 x = full_df[full_df['Name']==country]['Date'],
-    #                                 y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', True)],
-    #                                 #'text': ['a', 'b', 'c', 'd'],
-    #                                 #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-    #                                 name =  country,
-    #                                 mode = 'line',
-    #                                 marker =  {'size': 10}
-    #                             ) for country in default_countries
-    #                             ],
-    #                     'layout': dict(
-    #                         clickmode='event+select',
-    #                         xaxis={'type': 'date', 'title': 'time'},
-    #                         yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', True)},
-    #                         title="Cumulative"
-    #                     )
-    #                     }
-    #             ),
-    #     #dcc.H3("BottomGraph"),
-    #     dcc.Graph(id='bottomGraph',
-    #             figure={'data': [
-    #                         dict(
-    #                             x = full_df[full_df['Name']==country]['Date'],
-    #                             y = full_df[full_df['Name']==country][generate_plot_var(0, 'disable', False)],
-    #                             #'text': ['a', 'b', 'c', 'd'],
-    #                             #'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-    #                             name =  country,
-    #                             mode = 'line',
-    #                             marker =  {'size': 10}
-    #                         ) for country in default_countries
-    #                     ],
-    #                     'layout': dict(
-    #                         clickmode='event+select',
-    #                         xaxis={'type': 'date', 'title': 'time'},
-    #                         yaxis={'type': 'linear', 'title':generate_plot_var(0, 'disable', False)}
-    #                     )
-    #                     }
-    #             ),
-    #
-    # ])),
-    # dbc.Row(html.Div(className="bodyDiv", children=
-    # [
-    #     html.Div(className="tableCont",children=
-    #     [
-    #         html.H1('Data Table'),
-    #         html.H3('Select Columns:'),
-    #         #html.H3('Selected Columns:', className="subcomponent"),
-    #         dcc.Dropdown(
-    #             id='table_dropdown_select',
-    #             options=[{'label': colname, 'value': idx} for idx, colname in enumerate(full_df.columns)],
-    #             #value=[{'label':'deaths' 'value':1} for idx, colname],
-    #             value=[5,3,7,8,11,12,16,22,13,17,23,14,24,15,25],
-    #             placeholder='Select Columns',
-    #             multi=True,
-    #             className="side_controls"
-    #         ),
-    #         dash_table.DataTable(
-    #         id='table',
-    #         columns=[{"name": i, "id": i} for i in full_df.columns],
-    #         #columns=[],
-    #         data=full_df.to_dict('records'),
-    #         editable=True,
-    #         filter_action="native",
-    #         sort_action="native",
-    #         sort_mode="multi",
-    #         column_selectable="single",
-    #         row_selectable="multi",
-    #         selected_columns=[],
-    #         selected_rows=[],
-    #         page_action="native",
-    #         page_size=20,
-    #         style_table={'overflowX': 'scroll', 'padding': '10px'},
-    #         ),
-    #         html.Div(id="datatable-interactivity-container")
-    #     ]),
-    # ])),
-    # dbc.Row(html.Div(className="footer", children=["footer"])),
+        #    ],
+        #    id="dailyPlot_collapse",
+        #),
     ]
     return layout
 
@@ -644,6 +473,7 @@ def toggle_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
+
 # @app.callback(
 #     Output("cumPlot_collapse", "is_open"),
 #     [Input("cumPlot_button", "n_clicks")],
@@ -654,15 +484,15 @@ def toggle_collapse(n, is_open):
 #         return not is_open
 #     return is_open
 #
-# @app.callback(
-#     Output("dailyPlot_collapse", "is_open"),
-#     [Input("dailyPlot_button", "n_clicks")],
-#     [State("dailyPlot_collapse", "is_open")],
-# )
-# def toggle_collapse(n, is_open):
-#     if n:
-#         return not is_open
-#     return is_open
+@app.callback(
+    Output("dailyPlot_collapse", "is_open"),
+    [Input("dailyPlot_button", "n_clicks")],
+    [State("dailyPlot_collapse", "is_open")],
+)
+def toggle_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
 
 @app.callback(
     Output("link_label", "value"),
