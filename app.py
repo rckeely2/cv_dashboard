@@ -26,11 +26,13 @@ import short_url
 import country_converter as coco
 
 # Global calls
-full_df, cv_merged_df, iso_codes_df, indicator_df = fetch_data.fetch_all(purge=False)
+full_df, constant_df = fetch_data.fetch_all(purge=False)
 
 def map_iso3_to_name(country_list):
 	country_list = list(set(full_df['ISO3166:3'].unique()).intersection(set(country_list)))
-	subset_df = full_df.loc[full_df['ISO3166:3'].isin(country_list)][['Name','ISO3166:3']]
+	print(country_list)
+	full_subset = full_df.loc[full_df['ISO3166:3'].isin(country_list)]
+	subset_df = full_subset[['Name','ISO3166:3']]
 	subset_df = subset_df.drop_duplicates()
 	subset_dict = dict(zip(subset_df['ISO3166:3'], subset_df['Name']))
 	return [subset_dict[x] for x in country_list]
@@ -48,7 +50,7 @@ styles = {
 
 cc = coco.CountryConverter()
 EU_states = list(cc.data.loc[cc.data.EU <= 2017]['ISO3'].values)
-default_countries = map_iso3_to_name(EU_states)
+default_countries = [] #map_iso3_to_name(EU_states)
 #print(default_countries)
 # default_countries = ['Spain', 'Italy', 'France', 'Germany', 'United States',
 # 				'China', 'United Kingdom', 'Korea, Rep.']
@@ -57,10 +59,12 @@ continents = sorted(list(cc.data.continent.unique()))
 intOrg = ['EU', 'OECD', 'EU (Big 6)', 'East Asian Tigers', 'Former Dominions', 'BRICS', 'World']
 # superNats = ['EU', 'OECD', 'EU (Big 6)', 'East Asian Tigers', 'World'] + \
 # 			list(cc.data.UNregion.unique()) + list(cc.data.continent.unique())
-plot_vars = ['Confirmed', 'Deaths', 'Recovered', 'Active']
+plot_vars = ['Confirmed', 'Deaths', 'Recovered', 'Active', 'Tested']
 rmean_options = ['None', '3', '5', '7', '14', '21', '28']
 
 def generate_plot_var(cv_variable, normalise, cumulative):
+	if (cv_variable == None) or (cv_variable == 'None'):
+		cv_variable = 0
 	norm_str = ""
 	if normalise == "normalise":
 		norm_str = ", normalised"
@@ -142,7 +146,7 @@ def generate_single_data(country, threshold, rmean,
 		#y = rebase_series(apply_rmean(full_df[full_df['Name']==country][plot_var], rmean, cumulative),threshold),
 		#'text': ['a', 'b', 'c', 'd'],
 		#'customdata': ['c.a', 'c.b', 'c.c', 'c.d'],
-		name =  plot_vars[cv_variable],
+		name =  plot_vars[idx],
 		mode = 'line',
 		marker =  {'size': 10}
 	) for idx, plot_var in enumerate(plot_vars_l) ]
@@ -290,8 +294,9 @@ def generate_country_name_list(countries=None, superNats_sel=None):
 
 
 def generate_country_name_options():
-	return [{'label': country_name, 'value': idx} \
+	options = [{'label': country_name, 'value': idx} \
 		for idx, country_name in enumerate(generate_country_name_list())]
+	return options
 
 component_ids = {
 	'yscale_rb' : {'component' : 'radioButton', 'value_type': 'text'},
